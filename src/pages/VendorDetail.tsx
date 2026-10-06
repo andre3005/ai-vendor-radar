@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useQuery, useRanking } from '../hooks/useQueries'
@@ -9,14 +10,32 @@ import { fmtScore, JURISDICTION_LABEL, SEGMENT_LABEL } from '../lib/labels'
 import Monogram from '../components/Monogram'
 import ScoreRing from '../components/ScoreRing'
 import TierBadge from '../components/TierBadge'
-import Drawer from '../components/Drawer'
+import Sheet from '../components/Sheet'
 import Dialog from '../components/Dialog'
+import Segmented from '../components/Segmented'
+import { MoreMenu } from '../components/Popover'
 import VendorForm from '../components/VendorForm'
 import IncidentForm from '../components/IncidentForm'
-import IncidentItem from '../components/IncidentItem'
+import IncidentRow from '../components/IncidentRow'
+import IncidentSheet from '../components/IncidentSheet'
 import DataCenterForm from '../components/DataCenterForm'
 import DataMap from '../components/DataMap'
-import RatingRow, { type RatingWithCriterion } from '../components/RatingRow'
+import CriterionRow, { type RatingWithCriterion } from '../components/CriterionRow'
+
+type Section = 'criteria' | 'incidents' | 'centers'
+
+/** Axis label wrapped onto two lines so it is never clipped. */
+function Tick(props: { x?: number; y?: number; textAnchor?: 'start' | 'middle' | 'end'; payload?: { value: string } }) {
+  const { x = 0, y = 0, textAnchor = 'middle', payload } = props
+  const words = (payload?.value ?? '').split(' ')
+  const mid = words.length > 1 ? Math.ceil(words.length / 2) : 1
+  const lines = words.length > 1 ? [words.slice(0, mid).join(' '), words.slice(mid).join(' ')] : words
+  return (
+    <text x={x} y={y - (lines.length - 1) * 6} textAnchor={textAnchor} fontSize="13" fill="#6E6E73">
+      {lines.map((l, i) => <tspan key={i} x={x} dy={i === 0 ? 0 : 15}>{l}</tspan>)}
+    </text>
+  )
+}
 
 export default function VendorDetail() {
   const id = Number(useParams().id)
@@ -31,112 +50,152 @@ export default function VendorDetail() {
     .select('*, provider:provider_id(id, name)').eq('provider_id', id).order('occurred_on', { ascending: false }) as never, [id])
   const { data: centers } = useQuery<DataCenter[]>(() => supabase.from('data_center').select('*').eq('provider_id', id).order('id') as never, [id])
 
-  const [drawer, setDrawer] = useState<'edit' | 'incident' | 'dc' | null>(null)
-  const [editInc, setEditInc] = useState<Incident | null>(null)
+  const [section, setSection] = useState<Section>('criteria')
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [sheet, setSheet] = useState<'edit' | 'incident' | 'dc' | null>(null)
+  const [openInc, setOpenInc] = useState<number | null>(null)
   const [retract, setRetract] = useState<Incident | null>(null)
   const [removeVendor, setRemoveVendor] = useState(false)
 
   if (error && !vendor) {
-    return <div className="panel" role="alert"><p>The database isn't responding. It may be waking up after a pause.</p><button className="btn" onClick={retry}>Retry</button></div>
+    return <div className="card" role="alert" style={{ marginTop: 32 }}><p>The database isn't responding. It may be waking up after a pause.</p><button className="btn" style={{ marginTop: 16 }} onClick={retry}>Retry</button></div>
   }
-  if (loading && !vendor) return <div className="skeleton" style={{ height: 300 }} />
-  if (!vendor) return <div className="panel"><h1>Vendor not found</h1><Link to="/">Back to the radar</Link></div>
+  if (loading && !vendor) return <div className="skeleton" style={{ height: 320, marginTop: 32 }} />
+  if (!vendor) return <div className="card" style={{ marginTop: 32 }}><h1 className="title">Vendor not found</h1><Link to="/">Back to the radar</Link></div>
 
   const sorted = [...(ratings ?? [])].sort((a, b) => a.criterion.sort_order - b.criterion.sort_order)
   const chart = sorted.map(r => ({ name: r.criterion.name, score: r.score }))
+  const currentInc = incidents?.find(i => i.id === openInc) ?? null
 
   return (
     <>
-      <p><Link to="/">← All vendors</Link></p>
+      <Link to="/" className="back"><ChevronLeft size={18} strokeWidth={2} />Vendors</Link>
       <header className="vhead">
-        <Monogram id={vendor.id} name={vendor.name} size={56} />
-        <div className="vhead-text">
-          <h1>{vendor.name}</h1>
-          <p className="muted">
-            {vendor.tagline && <>{vendor.tagline}<br /></>}
-            {vendor.hq_city}, {vendor.hq_country}
-            {vendor.founded_year && <> · founded {vendor.founded_year}</>}
-            {vendor.flagship_model && <> · {vendor.flagship_model}</>} · {SEGMENT_LABEL[vendor.segment]}
-          </p>
+        <Monogram name={vendor.name} size={56} />
+        <div>
+          <h1 className="large-title">{vendor.name}</h1>
+          {vendor.tagline && <p className="muted" style={{ marginTop: 4 }}>{vendor.tagline}</p>}
+          <div className="facts callout">
+            <span><b>Headquarters</b>{vendor.hq_city}, {vendor.hq_country}</span>
+            {vendor.founded_year && <span><b>Founded</b>{vendor.founded_year}</span>}
+            {vendor.flagship_model && <span><b>Flagship</b>{vendor.flagship_model}</span>}
+            <span><b>Segment</b>{SEGMENT_LABEL[vendor.segment]}</span>
+          </div>
         </div>
-        <div className="vhead-actions">
-          <button className="btn secondary" onClick={() => setDrawer('edit')}>Edit</button>
-          <button className="btn secondary danger" onClick={() => setRemoveVendor(true)}>Remove vendor</button>
-        </div>
+        <MoreMenu label="Vendor actions" items={[
+          { label: 'Edit vendor', onClick: () => setSheet('edit') },
+          { label: 'Remove vendor', danger: true, onClick: () => setRemoveVendor(true) },
+        ]} />
       </header>
 
-      <div className="detail-grid">
-        <section className="panel scorecard" aria-label="Score">
-          <ScoreRing score={vendor.total_score} tier={vendor.risk_tier} size={160} />
+      <div className="grid-12 detail-top">
+        <section className="card ring-card" aria-label="Score">
+          <ScoreRing score={vendor.total_score} tier={vendor.risk_tier} />
           <TierBadge tier={vendor.risk_tier} />
-          <p><b>#{vendor.rank}</b> of {all?.length ?? '…'}</p>
-          <p className="muted">Base {fmtScore(vendor.base_score)} − incident penalty {fmtScore(vendor.penalty)} = <b>{fmtScore(vendor.total_score)}</b></p>
-          <Link to="/method">How is this calculated?</Link>
+          <p className="callout muted">#{vendor.rank} of {all?.length ?? '…'} vendors</p>
         </section>
+        <section className="card eq-card" aria-label="How the score is built">
+          <h2 className="headline">How the score is built</h2>
+          <div className="eq">
+            <div><span className="num-m">{fmtScore(vendor.base_score)}</span><span className="footnote">Base score</span></div>
+            <span className="op" aria-hidden="true">−</span>
+            <div><span className="num-m">{fmtScore(vendor.penalty)}</span><span className="footnote">Incident penalty</span></div>
+            <span className="op" aria-hidden="true">=</span>
+            <div><span className="num-m">{fmtScore(vendor.total_score)}</span><span className="footnote">Total</span></div>
+          </div>
+          <p className="callout" style={{ marginTop: 24 }}><Link to="/method">How is this calculated?</Link></p>
+        </section>
+      </div>
 
-        <section className="panel" aria-label="Criteria">
-          <h2>Criteria</h2>
-          <div className="criteria">
-            <div className="chart" aria-hidden="true">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={chart} outerRadius="58%" margin={{ left: 56, right: 56 }}>
-                  <PolarGrid stroke="var(--rule)" />
-                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 12, fill: '#536670' }} />
-                  <Radar dataKey="score" stroke="#2F6BFF" strokeWidth={2} fill="#2F6BFF" fillOpacity={0.18} dot={{ r: 4, fill: '#2F6BFF' }} isAnimationActive={false} />
-                </RadarChart>
-              </ResponsiveContainer>
+      <div className="sections">
+        <Segmented className="big" label="Section" value={section} onChange={setSection} options={[
+          { value: 'criteria', label: 'Criteria' },
+          { value: 'incidents', label: `Incidents (${incidents?.length ?? 0})` },
+          { value: 'centers', label: `Data centers (${centers?.length ?? 0})` },
+        ]} />
+
+        {section === 'criteria' && (
+          <div className="grid-12 crit-grid">
+            <div className="chart-col" aria-hidden="true">
+              <div className="chart-box">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={chart} outerRadius="56%" margin={{ top: 32, right: 56, bottom: 32, left: 56 }}>
+                    <PolarGrid stroke="rgba(0,0,0,0.12)" />
+                    <PolarAngleAxis dataKey="name" tick={<Tick />} />
+                    <Radar dataKey="score" stroke="#0071E3" strokeWidth={2} fill="#0071E3" fillOpacity={0.14} dot={{ r: 4, fill: '#0071E3' }} isAnimationActive={false} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <ul className="ratings">
-              {sorted.map(r => <RatingRow key={r.criterion.id} providerId={id} r={r} />)}
-            </ul>
+            <div className="list-col">
+              <div className="inset">
+                <ul className="rows">
+                  {sorted.map(r => (
+                    <li key={r.criterion.id}>
+                      <CriterionRow providerId={id} r={r} expanded={expanded === r.criterion.id}
+                        onToggle={() => setExpanded(e => (e === r.criterion.id ? null : r.criterion.id))} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
-        </section>
+        )}
+
+        {section === 'incidents' && (
+          <div style={{ marginTop: 24 }}>
+            <div className="sec-head">
+              <h2 className="title">Incidents</h2>
+              <button className="btn secondary small" onClick={() => setSheet('incident')}>Report incident</button>
+            </div>
+            <div className="inset">
+              {incidents && incidents.length === 0 && <div className="empty">No incidents on record for {vendor.name}.</div>}
+              <ul className="rows">{incidents?.map(i => <li key={i.id}><IncidentRow inc={i} onOpen={() => setOpenInc(i.id)} /></li>)}</ul>
+            </div>
+          </div>
+        )}
+
+        {section === 'centers' && (
+          <div className="grid-12 map-grid">
+            <div className="map-col">
+              {centers && centers.length > 0 ? <div className="map"><DataMap centers={centers} vendorName={vendor.name} /></div> : <div className="card empty">No data centers on record.</div>}
+            </div>
+            <div className="dc-col">
+              <div className="sec-head" style={{ marginBottom: 12 }}>
+                <h2 className="headline">Regions</h2>
+                <button className="btn secondary small" onClick={() => setSheet('dc')}>Add data center</button>
+              </div>
+              <div className="inset">
+                <ul className="rows">
+                  {centers?.map(c => (
+                    <li key={c.id} className="dc-row">
+                      <div><span className="headline">{c.city}</span><span className="callout">{c.country}</span></div>
+                      <div className="meta"><span className="chip" title={JURISDICTION_LABEL[c.jurisdiction]}>{c.jurisdiction}</span><span className="purpose">{c.purpose}</span></div>
+                      <MoreMenu label={`${c.city} actions`} items={[{ label: 'Close region', danger: true, onClick: () => act(supabase.from('data_center').delete().eq('id', c.id), 'Region closed') }]} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="detail-grid2">
-        <section className="panel" aria-label="Incidents">
-          <div className="sec-head">
-            <h2>Incidents</h2>
-            <button className="btn" onClick={() => { setEditInc(null); setDrawer('incident') }}>Report incident</button>
-          </div>
-          {incidents && incidents.length === 0 && <p className="muted">No incidents on record for {vendor.name}.</p>}
-          {incidents?.map(i => (
-            <IncidentItem key={i.id} inc={i} onEdit={() => { setEditInc(i); setDrawer('incident') }} onRetract={() => setRetract(i)} />
-          ))}
-        </section>
-
-        <section className="panel" aria-label="Data centers">
-          <div className="sec-head">
-            <h2>Data centers</h2>
-            <button className="btn" onClick={() => setDrawer('dc')}>Add data center</button>
-          </div>
-          {centers && centers.length > 0 ? <DataMap centers={centers} vendorName={vendor.name} /> : <p className="muted">No data centers on record.</p>}
-          <ul className="dc-list">
-            {centers?.map(c => (
-              <li key={c.id}>
-                <span><b>{c.city}</b>, {c.country}<br />
-                  <span className="muted">{c.jurisdiction} · {JURISDICTION_LABEL[c.jurisdiction]} · {c.purpose}</span></span>
-                <button className="btn secondary small danger" onClick={() => act(supabase.from('data_center').delete().eq('id', c.id), 'Region closed')}>Close region</button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-
-      <Drawer open={drawer === 'edit'} title="Edit vendor" onClose={() => setDrawer(null)}>
-        <VendorForm initial={vendor} onDone={() => setDrawer(null)} />
-      </Drawer>
-      <Drawer open={drawer === 'incident'} title={editInc ? 'Edit incident' : 'Report incident'} onClose={() => setDrawer(null)}>
-        <IncidentForm key={editInc?.id ?? 'new'} vendors={[{ id: vendor.id, name: vendor.name }]} initial={editInc ?? undefined} defaultProviderId={vendor.id} onDone={() => setDrawer(null)} />
-      </Drawer>
-      <Drawer open={drawer === 'dc'} title="Add data center" onClose={() => setDrawer(null)}>
-        <DataCenterForm providerId={vendor.id} onDone={() => setDrawer(null)} />
-      </Drawer>
+      <Sheet open={sheet === 'edit'} title="Edit vendor" onClose={() => setSheet(null)} action={{ label: 'Save', form: 'sheet-form' }}>
+        <VendorForm initial={vendor} onDone={() => setSheet(null)} />
+      </Sheet>
+      <Sheet open={sheet === 'incident'} title="Report incident" onClose={() => setSheet(null)} action={{ label: 'Save', form: 'sheet-form' }}>
+        <IncidentForm vendors={[{ id: vendor.id, name: vendor.name }]} defaultProviderId={vendor.id} onDone={() => setSheet(null)} />
+      </Sheet>
+      <Sheet open={sheet === 'dc'} title="Add data center" onClose={() => setSheet(null)} action={{ label: 'Save', form: 'sheet-form' }}>
+        <DataCenterForm providerId={vendor.id} onDone={() => setSheet(null)} />
+      </Sheet>
+      <IncidentSheet inc={currentInc} onClose={() => setOpenInc(null)} onRetract={setRetract} />
 
       {retract && (
         <Dialog title="Retract this incident?" confirmLabel="Retract incident" danger onCancel={() => setRetract(null)}
-          onConfirm={async () => { await act(supabase.from('incident').delete().eq('id', retract.id), 'Incident retracted'); setRetract(null) }}>
-          <p>The vendor's score will be recalculated.</p>
+          onConfirm={async () => { await act(supabase.from('incident').delete().eq('id', retract.id), 'Incident retracted'); setRetract(null); setOpenInc(null) }}>
+          The vendor's score will be recalculated.
         </Dialog>
       )}
       {removeVendor && (
@@ -145,7 +204,7 @@ export default function VendorDetail() {
             const ok = await act(supabase.from('provider').delete().eq('id', vendor.id), 'Vendor removed')
             if (ok) nav('/')
           }}>
-          <p>This also removes {incidents?.length ?? 0} incident{incidents?.length === 1 ? '' : 's'}, {centers?.length ?? 0} data center{centers?.length === 1 ? '' : 's'} and {ratings?.length ?? 0} ratings.</p>
+          This also removes {incidents?.length ?? 0} incident{incidents?.length === 1 ? '' : 's'}, {centers?.length ?? 0} data center{centers?.length === 1 ? '' : 's'} and {ratings?.length ?? 0} ratings.
         </Dialog>
       )}
     </>

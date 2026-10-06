@@ -14,6 +14,7 @@ export default function VendorForm({ initial, onDone }: { initial?: Provider; on
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (saving) return
     const f = new FormData(e.currentTarget)
     const year = String(f.get('founded_year') ?? '').trim()
     const row = {
@@ -37,7 +38,7 @@ export default function VendorForm({ initial, onDone }: { initial?: Provider; on
   }
 
   return (
-    <form className="form" onSubmit={submit}>
+    <form id="sheet-form" className="form" onSubmit={submit}>
       <label>Name<input name="name" required minLength={2} maxLength={60} defaultValue={initial?.name} /></label>
       <label>Tagline<input name="tagline" maxLength={120} defaultValue={initial?.tagline ?? ''} /></label>
       <div className="row2">
@@ -54,7 +55,6 @@ export default function VendorForm({ initial, onDone }: { initial?: Provider; on
         </select>
       </label>
       {error && <p className="field-error" role="alert">{error}</p>}
-      <button className="btn" type="submit" disabled={saving}>{saving ? 'Saving…' : initial ? 'Save changes' : 'Add vendor'}</button>
     </form>
   )
 }

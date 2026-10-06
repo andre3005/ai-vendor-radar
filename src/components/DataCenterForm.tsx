@@ -20,6 +20,7 @@ export default function DataCenterForm({ providerId, onDone }: { providerId: num
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (saving) return
     const f = new FormData(e.currentTarget)
     setSaving(true)
     const ok = await act(supabase.from('data_center').insert({
@@ -31,7 +32,7 @@ export default function DataCenterForm({ providerId, onDone }: { providerId: num
   }
 
   return (
-    <form className="form" onSubmit={submit}>
+    <form id="sheet-form" className="form" onSubmit={submit}>
       <label>Preset city
         <select defaultValue="" onChange={e => preset(e.target.value)}>
           <option value="">Custom</option>
@@ -56,7 +57,6 @@ export default function DataCenterForm({ providerId, onDone }: { providerId: num
         <label>Latitude<input required type="number" step="any" min={-90} max={90} value={v.lat} onChange={e => setV({ ...v, lat: e.target.value })} /></label>
         <label>Longitude<input required type="number" step="any" min={-180} max={180} value={v.lng} onChange={e => setV({ ...v, lng: e.target.value })} /></label>
       </div>
-      <button className="btn" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Add data center'}</button>
     </form>
   )
 }

@@ -15,6 +15,7 @@ export default function IncidentForm({ vendors, initial, defaultProviderId, onDo
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (saving) return
     const f = new FormData(e.currentTarget)
     const fine = String(f.get('fine') ?? '').trim()
     const row = {
@@ -38,7 +39,7 @@ export default function IncidentForm({ vendors, initial, defaultProviderId, onDo
   }
 
   return (
-    <form className="form" onSubmit={submit}>
+    <form id="sheet-form" className="form" onSubmit={submit}>
       <label>Vendor
         <select name="provider_id" required defaultValue={initial?.provider_id ?? defaultProviderId ?? ''}>
           <option value="" disabled>Choose a vendor</option>
@@ -46,7 +47,7 @@ export default function IncidentForm({ vendors, initial, defaultProviderId, onDo
         </select>
       </label>
       <label>Title<input name="title" required minLength={5} maxLength={120} defaultValue={initial?.title} /></label>
-      <label>Description<textarea name="description" maxLength={600} rows={4} style={{ padding: 12 }} defaultValue={initial?.description ?? ''} /></label>
+      <label>Description<textarea name="description" maxLength={600} rows={4} defaultValue={initial?.description ?? ''} /></label>
       <div className="row2">
         <label>Type
           <select value={type} onChange={e => setType(e.target.value as IncidentType)}>
@@ -73,7 +74,6 @@ export default function IncidentForm({ vendors, initial, defaultProviderId, onDo
           <label>Authority<input name="authority" maxLength={80} defaultValue={initial?.authority ?? ''} /></label>
         </div>
       )}
-      <button className="btn" type="submit" disabled={saving}>{saving ? 'Saving…' : initial ? 'Save changes' : 'Report incident'}</button>
     </form>
   )
 }

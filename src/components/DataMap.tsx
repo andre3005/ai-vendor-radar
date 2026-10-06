@@ -24,7 +24,7 @@ function WheelOnClick({ enabled }: { enabled: boolean }) {
 export default function DataMap({ centers, vendorName }: { centers: DataCenter[]; vendorName: string }) {
   const [wheel, setWheel] = useState(false)
   return (
-    <div className="map" onClick={() => setWheel(true)} onMouseLeave={() => setWheel(false)}>
+    <div style={{ height: "100%" }} onClick={() => setWheel(true)} onMouseLeave={() => setWheel(false)}>
       <MapContainer center={[30, 0]} zoom={2} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
