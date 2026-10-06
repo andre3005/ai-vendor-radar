@@ -1,0 +1,29 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--mist); color: var(--ink); font: 400 16px/1.55 var(--font-ui); }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; letter-spacing: -0.01em; margin: 0 0 12px; }
+h1 { font-size: 31.25px; } h2 { font-size: 25px; }
+@media (min-width: 640px) { h1 { font-size: 39px; } }
+a { color: var(--signal-ink); }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 640px) { .wrap { padding: 0 24px; } }
+
+.topbar { position: sticky; top: 0; z-index: 10; background: rgba(251,252,252,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
+.topbar .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+.wordmark { font-family: var(--font-display); font-weight: 700; color: var(--ink); text-decoration: none; }
+.nav-links { display: none; gap: 4px; flex: 1; }
+.nav-links a, .tabbar a { color: var(--slate); text-decoration: none; padding: 8px 12px; border-radius: var(--r-control); font-weight: 500; }
+.nav-links a.active, .tabbar a.active { color: var(--ink); background: var(--mist); }
+.topbar .spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: var(--r-control); border: 1px solid transparent; background: var(--signal-ink); color: #fff; font: 600 16px var(--font-ui); cursor: pointer; text-decoration: none; }
+.btn.secondary { background: var(--surface); color: var(--ink); border-color: var(--rule); }
+.topbar .btn { display: none; }
+main { min-height: calc(100vh - 56px - 140px); padding: 32px 0 96px; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); padding: 24px; }
+footer { color: var(--slate); font-size: 12.8px; padding: 24px 0 96px; }
+.tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; background: var(--surface); border-top: 1px solid var(--rule); padding: 4px 0; z-index: 10; }
+.tabbar a { min-height: 44px; display: flex; align-items: center; font-size: 12.8px; }
+@media (min-width: 640px) {
+  .nav-links { display: flex; } .topbar .btn { display: inline-flex; } .tabbar { display: none; }
+  footer { padding-bottom: 32px; }
+}

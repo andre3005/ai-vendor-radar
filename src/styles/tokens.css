@@ -1,0 +1,14 @@
+:root {
+  color-scheme: light;
+  --mist: #EDF1F2; --surface: #FBFCFC; --ink: #13232B; --slate: #536670; --rule: #D6DEE1;
+  --signal: #2F6BFF; --signal-ink: #1F55E0; --sweep-teal: #19C3B3;
+  --low: #1E9E6A; --low-ink: #13724F; --low-tint: #E3F4EC;
+  --moderate: #A87A0C; --moderate-ink: #8A5A0B; --moderate-tint: #FBF0D9;
+  --elevated: #E06A1B; --elevated-ink: #A8470F; --elevated-tint: #FCE8DA;
+  --high: #D2343F; --high-ink: #B4232F; --high-tint: #FBE3E5;
+  --font-display: "Sora", system-ui, sans-serif;
+  --font-ui: "Instrument Sans", system-ui, sans-serif;
+  --r-panel: 20px; --r-control: 10px;
+  --shadow-float: 0 1px 0 rgba(19,35,43,.04), 0 16px 40px -16px rgba(19,35,43,.22);
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+}
