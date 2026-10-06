@@ -1,5 +1,6 @@
 import { NavLink, Link, Route, Routes } from 'react-router-dom'
 import Placeholder from './pages/Placeholder'
+import Home from './pages/Home'
 
 const NAV = [
   { to: '/', label: 'Radar' },
@@ -25,7 +26,7 @@ export default function App() {
       <main>
         <div className="wrap">
           <Routes>
-            <Route path="/" element={<Placeholder title="AI Vendor Risk Radar" />} />
+            <Route path="/" element={<Home />} />
             <Route path="/vendors/:id" element={<Placeholder title="Vendor" />} />
             <Route path="/incidents" element={<Placeholder title="Incidents" />} />
             <Route path="/priorities" element={<Placeholder title="Priorities" />} />
