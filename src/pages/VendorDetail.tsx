@@ -25,13 +25,15 @@ import CriterionRow, { type RatingWithCriterion } from '../components/CriterionR
 type Section = 'criteria' | 'incidents' | 'centers'
 
 /** Axis label wrapped onto two lines so it is never clipped. */
-function Tick(props: { x?: number; y?: number; textAnchor?: 'start' | 'middle' | 'end'; payload?: { value: string } }) {
-  const { x = 0, y = 0, textAnchor = 'middle', payload } = props
+function Tick(props: { x?: number; y?: number; cy?: number; textAnchor?: 'start' | 'middle' | 'end'; payload?: { value: string } }) {
+  const { x = 0, y = 0, cy = 0, textAnchor = 'middle', payload } = props
   const words = (payload?.value ?? '').split(' ')
   const mid = words.length > 1 ? Math.ceil(words.length / 2) : 1
   const lines = words.length > 1 ? [words.slice(0, mid).join(' '), words.slice(mid).join(' ')] : words
+  // top labels grow upwards, bottom labels start lower, side labels stay centred on the axis end
+  const dy = y < cy - 10 ? -(lines.length - 1) * 15 - 4 : y > cy + 10 ? 14 : -(lines.length - 1) * 7
   return (
-    <text x={x} y={y - (lines.length - 1) * 6} textAnchor={textAnchor} fontSize="13" fill="#6E6E73">
+    <text x={x} y={y + dy} textAnchor={textAnchor} fontSize="13" fill="#6E6E73" style={{ letterSpacing: 0 }}>
       {lines.map((l, i) => <tspan key={i} x={x} dy={i === 0 ? 0 : 15}>{l}</tspan>)}
     </text>
   )
